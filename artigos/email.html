@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+	<meta charset="utf-8">
+	<title>	securitylabs - Correio Eletrônico </title>
+	<link rel="stylesheet" type="text/css" href="css/estilos.css"/>
+</head>
+<body>
+<div id="interface">
+	<figure class="foto-legenda">
+		<img src="imagens/postfix.jpg"/>
+		<figcaption>
+		Fonte:Google_fotos
+		</figcaption>
+	</figure>
+<H1> Servidor de Correio Eletrônico </H1>
+	
+<h2>1. Apresentação</h2>
+<p> Serviço de Correio eletrônico é composto por três partes que são:</p>
+<ul>
+<li> MTA - Mail Transfer Agent </li>
+<li> MDA - Mail Delivery Agent </li>
+<li> MUA - Mail User Agent </li>
+</ul>
+<p>
+Como o serviço de correio eletrônico possui muitas etapas a instalação foi divida em duas partes, nessa primeira parte será instalado o MTA (Mail Transfer Agent) o programa escolhido para isso para essa implementação foi o POSTFIX.</p>
+<p>
+O POSTFIX foi desenvolvido no final da década de 90 pelo Wietse Venema. Sua primeira versão foi lançada em dezembro de 1998 atualmente estamos na versão X.X.X
+</p>
+O POSTFIX possui algumas caracteristicas, elas são:
+<ul>
+<li> Sistema Multitarefa - Seus módulos desempenham um papel específico em cada etapa do tráfego das mensagens, permitindo um desempenho melhor em sistemas multiprocessados;</li>
+<li> Separação de Privilégios - O POSTIFIX pode ser criado em ambientes CHROOT que restrige o acesso a arquivos internos numa espécie de "jaula"</li>
+<li> Modular - É possível criar módulos para trabalharem juntos com POSTFIX, facilitando a expansão;</li>
+<li> Compatibilidade - O POSTFIX possui compatibilidade com os mais diversos formatos de armazenamento de mensagens.</li>
+<p> Os arquivos de configuração do POSTFIX, são encontrados no diretório /etc/postfix, onde os seus principais arquivos são:</p>
+<ul>
+<li>main.cf - Arquivo Principal </li>
+<li>master.cf - Arquivo de Controle </li>
+
+<p> Em seguida, apresentamos os procedimentos para instalação e as instruções para validação do serviço </p>
+
+
+<h2> 2. Procedimentos </h2>
+
+<h3> Procedimentos para instalação do MTA (POSTFIX) - (SMTP)</h3>
+
+<ol type="1" start="1">
+<li>Instalar os pacotes postfix, procmail e bsd-mailx</li>
+<fieldset id="comandos"><pre>
+#apt install -y postfix procmail bsd-mailx
+</pre></fieldset>
+<p id="obs">
+<b>Observação:</b>
+Durante o processo de instalação do postfix, será necessário escolher a configuração tipo de servidor, nesta instalação selecione a opção site-internet e pressione a tecla "enter" para continuar
+</p>
+
+<li>Copiar as regras de login do serviço pop3 para o smtp:</li>
+<fieldset id="comandos"><pre>
+#cp /etc/pam.d/pop3 /etc/pam.d/smtp
+</pre></fieldset>
+
+<li>Entrar no diretório de configuração do postfix:</li>
+<fieldset id="comandos"><pre>
+# cd /etc/postfix
+</pre></fieldset>
+
+<li>Fazer o backup do arquivo main.cf:</li>
+<fieldset id="comandos"><pre>
+#mv main.cf main.cf.old
+</pre></fieldset>
+
+<li>Criar e editar o novo arquivo de configuração main.cf, em seguida, salve e saia do arquivo:</li>
+<fieldset id="comandos"><pre>
+#vim main.cf
+</pre></fieldset>
+
+<fieldset id="arquivo">
+<legend> Arquivo: /etc/postfix/main.cf </legend>
+	#Banner para o SMTP<br/>
+	smtpd_banner = MTA Allsafe Cybersecurity<br/>
+	<br/>
+	# Completa o dominio caso MUA falhe na atribuição<br/>
+	append_dot_mydomain = yes<br/>
+	<br/>
+	# FQDN do MTA<br/>
+	myhostname = datacenter.asf.com<br/>
+	<br/>
+	# Arquivo de mapeamento de alias<br/>
+	alias_maps = hash:/etc/aliases<br/>
+	alias_database = hash:/etc/aliases<br/>
+	<br/>
+	# Origem do MTA, por padrão o mesmo valor de /etc/mailname<br/>
+	myorigin = asf.com<br/>
+	<br/>
+	# Nomes qualificados para receber e-mail pelo dominio<br/>
+	mydestination = asf.com, smtp.asf.com, pop.asf.com, imap.asf.com, mail.asf.com, webmail.asf.com, localhost<br/>
+	<br/>
+	# Para configurar o relay de mail para outros servidores<br/>
+	relayhost = <br/>
+	<br/>
+	# IPs que poderão enviar email pelo MTA<br/>
+	mynetworks = 127.0.0.0/8 192.168.1.0/24<br/>
+	<br/>
+	# Armazena ps email em arquivos no servidor<br/>
+	mailbox_command = procmail -a "$EXTENSION"<br/>
+	<br/>
+	# Tamanho limite de armazenamento de caixa local<br/>
+	mailbox_size_limit = 0<br/>
+	<br/>
+	# Definir as interfaces que ficaram em LISTEN para MTA<br/>
+	inet_interfaces = all<br/>
+	<br/>
+	# tamanho máximo de mensagem<br/>
+	message_size_limit = 10000000<br/>
+	<br/>
+	# Sinal de redirecionamento para pastas do MUA<br/>
+	recipient_delimiter = +<br/>
+	<br/>
+	</fieldset>
+--> Salvar e Sair<br/>
+
+<li>Reiniciar e em seguida verificar o status do serviço do postfix</li>
+<fieldset id="comandos"><pre>
+#systemctl restart postfix
+#systemctl status postfix
+</pre></fieldset>
+*Verifique a linha ACTIVE e confirme que o serviço foi reiniciado
+
+<h2> 3. Validação </h2>
+<h3> Testes de validação da instalação do POSTFIX </h3>
+<ol type="1" start="1">
+
+<li>Testando o funcionamento do serviço</li>
+
+<ul>
+<li> Usando o TELNET </li>
+<fieldset id="comandos">
+<pre>
+#telnet datacenter.asf.com 25
+</pre></fieldset>
+
+<fieldset id="configuracao">
+--- Aguarde resposta do servidor (220 - Banner do Serviço)<br/>
+HELLO teste <br/>
+--- Aguarde resposta do servidor (250 2.1.0 ok) <br/>
+MAIL FROM: teste@teste.com <br/>
+--- Aguarde resposta do servidor (250 2.1.0 ok)<br/>
+RCPT TO: analista@asf.com <br/>
+--- Aguarde resposta do servidor (250 2.1.0 ok)<br/>
+DATA<br/>
+Subject: Teste envio por TELNET <br/>
+Envio de mensagem por TELNET. <br/>
+. <br/>
+--- Aguarde resposta do servidor (250 2.1.0 ok)<br/>
+quit <br/>
+</fieldset>
+
+<li> Verifique se o e-mail foi enviado </li>
+<fieldset id="comandos"><pre>
+#cat /var/spool/mail/analista
+</pre></fieldset>
+</ul>
+<li> Usando o shell </li>
+<fieldset id="comandos"><pre>
+#echo "Teste de envio" | mail -s "Teste" <endereço de e-mail válido>
+</fieldset></pre>
+<p id="obs">
+Para uso de endereço externo seu provedor deve permitir saida de pacotes na porta 25 que por default em muitos roteadores são bloqueados.</p>
+<li> Usando o MUA mutt </li>
+<fieldset id="comandos"><pre>
+#apt install mutt
+</fieldset></pre>
+
+<section id="referencias">
+<h2>Referências</h2>
+
+<footer id="rodape">
+	<p>	Copyright&copy 2017 by Robson Lopes</p>
+	<p><a href="http://www.facebook.com" target="_blank"><img src="imagens/fbklogo.jpg"/></a>
+	<a href="http://www.twitter.com" target="_blank"><img src="imagens/twrlogo.jpg"/></a>
+	</p>		
+</footer>
+</div>
+</body>
+</html>

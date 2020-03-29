@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+	<meta charset="utf-8">
+	<title>	securitylabs - Correio Eletrônico </title>
+	<link rel="stylesheet" type="text/css" href="css/estilos.css"/>
+</head>
+<body>
+<div id="interface">
+	<figure class="foto-legenda">
+		<img src="imagens/courier.jpg"/>
+		<figcaption>
+		Fonte:Google_fotos
+		</figcaption>
+	</figure>
+<H1> Servidor de Correio Eletrônico </H1>
+	
+<h2>1. Apresentação</h2>
+<p>
+Continuando a implantação do serviço de correio eletrônico, os procedimentos a seguir ajudarão a instalar o MDA (Mail Delivery Agent) nessa implementação usaremos o programa COURIER_Mail, também iremos fazer as implementações de segurança habilitando o serviço do SASL e TLS, harderning no serviço e a geração dos  certificados digitais auto-assinados para que o serviço funcione com segurança.
+</p>
+<p>
+Ao final serão feitos os testes de valiação do serviço e os testes nas máquinas do cliente usando o software MUA (Mail User Agent) Thunderbird.</p>
+
+<h2> 2. Procedimentos </h2>
+
+<h3> Aplicando segurança no MTA e instalando e configurando os protocolos do MDA </h3>
+<ol type="1" start="1">
+<li>Instalar os pacotes courier-authdaemon, courier-authlib, courier-imap, e courier-pop:</li>
+<fieldset id="comandos"><pre>
+#apt install -y courier-authdaemon courier-authlib courier-base
+#apt install -y courier-imap courier-pop
+</pre></fieldset>
+
+<li>Instalar as bibliotecas e modulos do serviço SASLv
+<fieldset id="comandos"><pre>
+apt install libsasl2-2 sasl2-bin libsasl2-modules
+</pre></fieldset>
+
+<li>Entrar no diretório /etc/default:</li>
+<fieldset id="comandos"><pre>
+# cd /etc/default
+</pre></fieldset>
+
+<li>Fazer o backup do arquivo saslauthd:</li>
+<fieldset id="comandos"><pre>
+#mv saslauthd saslauthd.bkp 
+</pre></fieldset>
+
+<li>Criar e Editar o novo arquivo saslauthd:</li>
+<fieldset id="comandos"><pre>
+#vim saslauthd
+</pre></fieldset>
+
+<fieldset id="arquivo">
+<legend> Arquivo: /etc/default/saslauthd </legend>
+	START=yes <br/>
+	MECHANISMS="pam" <br/>
+	MECH_OPTIONS="" <br/>
+	THREADS=5 <br/>
+	OPTIONS="-c -m /var/spool/postfix/var/run/saslauthd -r" <br/>
+</fieldset>
+
+<li>Criar a árvore de diretórios /var/run/saslauthd dentro de /var/spool/postfix:</li>
+<fieldset id="comandos"><pre>
+#mkdir -p /var/spool/postfix/var/run/saslauthd
+</fieldset></pre>
+<li>Em seguida crie e edite o arquivo smtpd.conf dentro do diretório /etcpostfix/sasl<br/>
+<fieldset id="comandos"><pre>
+#vim /etc/postfix/sasl/smtpd.conf
+</fieldset></pre>
+<fieldset id="arquivo">
+<legend>
+Arquivo: /etc/postfix/sasl/smtpd.conf
+</legend>
+pwcheck_method: saslauthd<br/>
+mech_list: plain login<br/>
+</fieldset>
+
+<li>Editar alterações no arquivo de configuração do postfix (/etc/postfix/main.cf):</li>
+<fieldset id="comandos"><pre>
+# vim /etc/postfix/main.cf
+</fieldset></pre>
+
+<fieldset id="arquivo">
+<legend>
+Arquivo /etc/postfix/main.cf
+</legend>
+<ul><li>
+Inicie a edição comentando as linhas referentes ao procmail, pois, este serviço não é mais utilizado:</li></ul><br/>
+	# Armazena ps email em arquivos no servidor<br/>
+	# mailbox_command = procmail -a "$EXTENSION"<br/>
+	<br/>
+<ul><li>
+
+Em seguida vá até o final do arquivo e acrescente:
+</li></ul><br/>
+	#Diretorio padrao de armazenamento de informações<br/>
+	home_mailbox = Maildir/<br/>
+<br/>
+	# Desabilita o comando vrfy<br/>
+	disable_vrfy_command = yes<br/>
+<br/>
+	# Configurações do SMTPD para SASL<br/>
+	smtpd_sasl_local_domain = <br/>
+	smtpd_sasl_auth_enable = yes<br/>
+	smtpd_sasl_security_options = noanonymous<br/>
+	smtpd_recipient_restrictions =  permit_sasl_authenticated, permit_mynetworks, reject_unauth_destination <br/>
+	<br>
+</fieldset>
+
+<li>Usando a ferramenta maildirmake crie no /etc/skel o esquema de armazenamento de e-mail para os futuros usuários da ASF.com:</li>
+<fieldset id="comandos"><pre>
+#maildirmake /etc/skel/Maildir
+#maildirmake /etc/skel/Maildir/.Enviados
+#maildirmake /etc/skel/Maildir/.Lixeira
+#maildirmake /etc/skel/Maildir/.Rascunhos
+#maildirmake /etc/skel/Maildir/.Spam
+</pre></fieldset>
+
+<li>Edite o script mail_users.sh para criar os diretórios de armazenamento de e-mail para os usuários existentes:</li>
+<fieldset id="comandos"><pre>
+#vim mail_users.sh
+</fieldset></pre>
+
+<fieldset id="arquivo">
+<legend>
+Arquivo /etc/postfix/mail_users.sh
+</legend>
+#!/bin/bash<br/>
+<br/>
+USERS=`getent passwd | awk -F: '$3 >= 1000 {print $1}' | grep -v nobody`<br/>
+<br/>
+for ONE in $USERS; do<br/>
+  HM=`getent passwd $ONE | awk -F: '{print $6}'`<br/>
+  maildirmake $HM/Maildir 2> /dev/null && echo "Diretório $HM/Maildir criado com sucesso"<br/>
+<br/>
+  for PASTAS in .Enviados .Rascunhos .Lixeira .Spam<br/>
+  do<br/>
+    maildirmake $HM/Maildir/$PASTAS 2> /dev/null && echo "Diretorio $HM/$PASTAS criado com sucesso"<br/>
+  done<br/>
+<br/>
+  chown $ONE:$ONE -R $HM/Maildir<br/>
+done<br/>
+</fieldset>
+
+<li>Transforme o script em executavel e em seguir execute o script:</li>
+<fieldset id="comandos"><pre>
+#chmod u+x mail_users.sh
+#./mail_users.sh
+</pre></fieldset>
+
+<h3>Criando os certificados</h3>
+<li>Criar o diretório ssl dentro /etc/postfix em seguida entre nele:</li>
+<fieldset id="comandos"><pre>
+#mkdir /etc/postfix/ssl
+#cd /etc/postfix/ssl
+</pre></fieldset>
+
+<li>Gerando a "chave privada" smtpd.key:</li>
+<fieldset id="comandos"><pre>
+#openssl genrsa -des3 -rand /etc/hosts -out smtpd.key 1024
+</pre></fieldset>
+<p id="obs">
+Observação:
+* será solicitado uma senha após a execução do comando
+</p>
+
+<li>Criando o pedido de certificado smtpd.csr:</li>
+<fieldset id="comandos"><pre>
+#openssl req -new -key smtpd.key -out smtpd.csr
+</pre></fieldset>
+<p id="obs">
+observações:
+Informe a senha configurada no arquivo da chave privada <br/>
+** Preencha as informações solicitadas para o pedido do certificado<br/>
+</p>
+<fieldset id="configuracao">
+<ul>
+<li>Country Name (2 letter code) [AU]:BR</li>
+<li>State or Province Name (full name) [Some-State]:RiodeJaneiro</li>
+<li>Locality Name (eg, city) []:RiodeJaneiro</li>
+<li>Organization Name (eg, company) [Internet Widgits Pty Ltd]:ASF</li>
+<li>Organizational Unit Name (eg, section) []:SI</li>
+<li>Common Name (e.g. server FQDN or YOUR name) []:mail.asf.com</li>
+<li>Email Address []:analista@asf.com</li>
+</ul>
+<p id="obs">
+Nas últimas duas informações é só pressionar a tecla "enter" para continuar
+</p>
+</fieldset>
+
+<li>Gerando o certificado auto-assinado para uso do servidor smtp (MTA)<br/>
+<fieldset id="comandos"><pre>
+#openssl x509 -req -days 365 -in smtpd.csr -signkey smtpd.key -out smtpd.crt
+</pre></fieldset>
+<li>Gerar uma chave sem senha para uso em configuração "Chave pública":</li>
+<fieldset id="comandos"><pre>
+#openssl rsa -in smtpd.key -out smtpd.key.nocrypt
+</pre></fieldset>
+<li>Trocar os arquivos para que a chave sem senha seja usada e a chave com senha fique protegida:</li>
+<fieldset id="comandos"><pre>
+#mv smtpd.key smtpd.key.crypt
+#mv smtpd.key.nocrypt smtpd.key
+</pre></fieldset>
+<li>Gerar o certificado de autoridade do servidor MTA:</li>
+<fieldset id="comandos"><pre>
+#openssl req -new -x509 -extensions v3_ca -keyout cakey.pem -out cacert.pem -days 365
+</pre></fieldset>
+<fieldset id="configuracao">
+<ul>
+<li>Country Name (2 letter code) [AU]:BR</li>
+<li>State or Province Name (full name) [Some-State]:RiodeJaneiro</li>
+<li>Locality Name (eg, city) []:RiodeJaneiro</li>
+<li>Organization Name (eg, company) [Internet Widgits Pty Ltd]:ASF</li>
+<li>Organizational Unit Name (eg, section) []:SI</li>
+<li>Common Name (e.g. server FQDN or YOUR name) []:mail.asf.com</li>
+<li>Email Address []:analista@asf.com</li>
+</fieldset>
+
+
+<li>Editar alterações no arquivo de configuração do postfix (/etc/postfix/main.cf) para habilitar o serviço TLS e indicar os certificados:</li>
+<fieldset id="comandos"><pre>
+# vim /etc/postfix/main.cf
+</pre></fieldset>
+
+<fieldset id="arquivo">
+<legend>
+Arquivo /etc/postfix/main.cf
+</legend>
+<ul><li>
+Acrescentar ao final do arquivo as linhas a seguir
+</li></ul>
+<br/>
+# Configuracoes TLS<br/>
+smtpd_tls_auth_only = no<br/>
+smtp_use_tls = yes<br/>
+smtp_tls_note_starttls_offer = yes<br/>
+smtpd_tls_CAfile = /etc/postfix/ssl/cacert.pem<br/>
+smtpd_tls_loglevel = 1<br/>
+smtpd_tls_received_header = yes<br/>
+smtpd_tls_session_cache_timeout = 3600s<br/>
+smtpd_tls_cert_file = /etc/postfix/ssl/webmail.crt<br/>
+smtpd_tls_key_file = /etc/postfix/ssl/webmail.key<br/>
+smtpd_tls_session_cache_database = btree:${queue_directory}/smtpd_scache<br/>
+smtp_tls_session_cache_database = btree:${queue_directory}/smtp_scache<br/>
+tls_random_source = dev:/dev/urandom<br/>
+<br/>
+</fieldset>
+
+<li>Instalar os pacotes do MDA com suporte ao ssl courier-imap-ssl e courier-pop-ssl:</li>
+<fieldset id="comandos"><pre>
+#apt install courier-imap-ssl courier-pop-ssl courier-ssl
+</fieldset></pre>
+<li>Configurar para que os serviços courier-imap-ssl e courier-pop-ssl iniciem com sistema na próxima inicialização:</li>
+<fieldset id="comandos"><pre>
+#systemctl enable courier-imap-ssl
+#systemctl enable courier-pop-ssl
+</fieldset></pre>
+<li>Alterar a permissão do diretório /etc/courier/shared (datacenter imapd: /etc/courier/shared/index: Permission denied):</li>
+<fieldset id="comandos"><pre>
+#chmod 777 /etc/courier/shared
+</fieldset></pre>
+<li>Reiniciar os serviços courier-imap-ssl, courier-pop-ssl, saslauthd, courier-authdaemon e postfix:</li>
+<fieldset id="comandos"><pre>
+#systemctl restart postfix
+#systemctl restart courier-authdaemon
+#systemctl restart saslauthd
+#systemctl restart courier-imap-ssl
+#systemctl restart courier-pop-ssl
+</fieldset></pre>
+
+<h2> 3. Validação </h2>
+<h3> Testes de validação da instalação do POSTFIX </h3>
+<ol type="1" start="1">
+<li>Checar o status de cada serviço</li>
+<fieldset id="comandos"><pre>
+#systemctl status postfix
+#systemctl status courier-authdaemon
+#systemctl status saslauthd
+#systemctl status courier-imap-ssl
+#systemctl status courier-pop-ssl
+</fieldset></pre>
+<li>Verificar se os serviços estão ouvindo (LISTEN) nas devidas portas (25, 110, 143, 993 e 995).<br/>
+<fieldset id="comandos"><pre>
+#ss -nltp | egrep '25|110|143|993|995'
+</fieldset></pre>
+<li>Para testar o funcionamento do serviço na maquina cliente interno instalar o software (MUA) Thunderbird e faça a validação do serviço.</li>
+<li>Faça os ajustes nas regras do firewall da ASF.com e em seguida vá para o cliente externo, instale o Thunderbird e repita os testes feitos para validação do serviço.</li>
+
+<h<section id="referencias">
+<h2>Referências</h2>
+
+
+<footer id="rodape">
+	<p>	Copyright&copy 2017 by Robson Lopes</p>
+	<p><a href="http://www.facebook.com" target="_blank"><img src="imagens/fbklogo.jpg"/></a>
+	<a href="http://www.twitter.com" target="_blank"><img src="imagens/twrlogo.jpg"/></a>
+	</p>		
+</footer>
+</div>
+</body>
+</html>

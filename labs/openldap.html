@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+	<meta charset="utf-8">
+	<title>	securitylabs - OpenLDAP </title>
+	<link rel="stylesheet" type="text/css" href="css/estilos.css"/>
+</head>
+<body>
+<div id="interface">
+<figure class="foto-legenda">
+		<img src="imagens/openldap.jpg"/>
+		<figcaption>
+		Fonte:Google_fotos
+		</figcaption>
+</figure>
+
+<H1> OpenLDAP </H1>
+
+<h2>1. Apresentação</h2>
+<p>
+Serviço de LDAP (Protocolo Acesso Direto Leve) é o serviço de diretório que usa o protocolo LDAP, baseado no protocolo X.500. OpenLDAP constitui-se de:
+</p>
+<ul>
+<li>slapd  - Serviço OpenLDAP;</li>
+<li>slurpd - Serviço para replicação e atualização OpenLDAP;
+<li>libraries - Bibliotecas para implementação do OpenLDAP, com utilitários e ferramentas; </li>
+</ul>
+<h2>2. Procedimentos
+
+<h3> Instalação do Serviço o OPENLDAP </h3>
+
+<ol type="1" start="1">
+
+<li>Instalar os pacotes do OpenLDAP</li>
+<fieldset id="comandos"><pre>
+# apt install slapd ldap-utils libldap-2.4-2 -y
+</pre></fieldset>
+
+<li>Entre no diretório de configuração do LDAP</li>
+<fieldset id="comandos"><pre>
+# cd /etc/ldap
+</pre></fieldset>
+
+<li>Criar e editar o arquivo slapd.conf, ao final, após a edição do arquivo mude o vim para modo de comando usando a tecla ESC em seguida execute os comando´para salvar e sair</li>
+<fieldset id="comandos"><pre>
+# vim /etc/ldap/slapd.conf
+</pre></fieldset>
+
+<fieldset id="arquivo"
+<legend>Arquivo: /etc/ldap/slapd.conf</legend>
+	# Esquemas (plugins) padroes do LDAP<br/>
+	include /etc/ldap/schema/core.schema<br/>
+	include /etc/ldap/schema/cosine.schema<br/>
+	include /etc/ldap/schema/nis.schema<br/>
+	include /etc/ldap/schema/inetorgperson.schema<br/>
+	<br/>
+	# Retrocompatibilidade para versao 2 do protocolo<br/>
+	#allow  bind_v2<br/>
+	<br/>
+	# Arquivo com o PID do servico<br/>
+	pidfile /var/run/slapd/slapd.pid<br/>
+	<br/>
+	# Arquivo de argumentos interno do OpenLDAP<br/>
+	argsfile /var/run/slapd/slapd.args<br/>
+	<br/>
+	# Nivel de log<br/>
+	loglevel none<br/>
+	<br/>
+	# Informacoes sobre modulos do OpenLDAP<br/>
+	modulepath /usr/lib/ldap<br/>
+	moduleload back_bdb<br/>
+	<br/>
+	# Tamanho de retorno de pesquisa na base LDAP<br/>
+	sizelimit 500<br/>
+	<br/>
+	# Quantidade fisica de processadores<br/>
+	tool-threads 1<br/>
+	<br/>
+	# Base do LDAP<br/>
+	backend bdb<br/>
+	database bdb<br/>
+	<br/>
+	# Definicoes da base LDAP<br/>
+	suffix  "dc=asf,dc=com"<br/>
+	rootdn  "cn=admin,dc=asf,dc=com"<br/>
+	rootpw  <Coloque sua senha aqui><br/>
+	<br/>
+	# Base do OpenLDAP e definicoes do cache<br/>
+	directory "/var/lib/ldap"<br/>
+	dbconfig set_cachesize 0 2097152 0<br/>
+	dbconfig set_lk_max_objects 1500<br/>
+	dbconfig set_lk_max_locks 1500<br/>
+	dbconfig set_lk_max_lockers 1500<br/>
+	<br/>
+	# Formato de indexacao de base<br/>
+	index   objectClass eq<br/>
+	<br/>
+	# Opcoes de checkpoint<br/>
+	lastmod on<br/>
+	checkpoint 512 30<br/>
+	<br/>
+	# Regras de leitura e escrita na base<br/>
+	access to attrs=userPassword,shadowLastChange<br/>
+		by dn="cn=admin,dc=asf,dc=com" write<br/>
+		by anonymous auth<br/>
+		by self write<br/>
+		by * none<br/>
+	<br/>
+	access to dn.base="" by read<br/>
+	<br/>
+	access to *<br/>
+		by dn="cn=admin,dc=asf,dc=com" write<br/>
+		by * read<br/>
+</fieldset>
+
+<li>Gerar a senha do usuário root do LDAP</li>
+<fieldset id="comandos"><pre>
+#slapdpasswd >> slapd.conf
+</pre></fieldset>
+
+<li>Com o comando cat confira se a senha apareceu no final do arquivo</li>
+<fieldset id="comandos"><pre>
+#cat /etc/ldap/slapd.conf
+</pre></fieldset>
+
+<li>Entrar novamente no arquivo de configuração do LDAP para ajustar a senha na diretiva rootpw na parte das diretivas da base LDAP</li>
+<fieldset id="comandos"><pre>
+#vim /etc/ldap/slapd.conf
+</pre></fieldset>
+<fieldset id="configuracao">
+<ul>
+<li>Com o vim ainda na parte de comando use as setas direcionais até a linha da senha gerada com a instrução do item 4, posicione o cursor no inicio da linha e em seguida recorte com o comando dd</li>
+<li>Ainda no modo de comando posicione o cursor usando as setas direcionais na linha seguinte a diretira rootpw, na parte do arquivo destinado as diretivas da base LDAP, e execute o comando p para colar a senha.</li>
+<li>Agora passe o VIM para o modo de edição, posicione a senha na mesma linha da rootpw respeitando a idêntação do arquivo, por fim, salve saia o arquivo de configuração</li>
+</ul>
+</fieldset>
+  
+<li>Durante a instalação o Debian acaba passando direto por alguns parametros importantes para o OpenLDAP, para ajustar execute a o dpkg-reconfigure no serviço slapd e configure as opções para o OpenLDAP</li>
+<fieldset id="comandos"><pre>
+# dpkg-reconfigure slapd
+</pre></fieldset>
+<p>Configure quando for solicitado em:</p>
+<fieldset id="configuracao">
+<ul>
+<li>Omitir configuração do servidor OpenLDAP: Não </li>
+<li>Informe o nome do dominio DNS para construir a base dn: asf.com</li>
+<li>Informe o nome da organização: allsafe </li>
+<li>Digite a senha: <Use a mesma que foi colocada na instalação></li>
+<li>Escolha a base: BDB </li>
+<li>Remoção da base de dados quando o pacote slapd for expurgado: Não </li>
+<li>Mover base antiga de dados em /var/lib/ldap: Sim </li>
+</ul>
+</br>
+</fieldset>
+
+<li>Criar um novo repositório de configuração para OpenLDAP</li>
+<fieldset id="comandos"><pre>
+# cd /etc/ldap
+# mv slapd.d slapd.d.old
+# mkdir slapd.d
+# chown openldap: -R slapd.d
+# slaptest -f slapd.conf -F slapd.d
+</pre></fieldset>
+
+<li>Incie o serviço do OpenLDAP, em seguida verifique o status do serviço</li>
+<fieldset id="comandos"><pre>
+# systemctl stop slapd
+# systemctl start slapd
+# systemctl status slapd
+</pre></fieldset>
+</ol>
+
+<h2> Validação </h2>
+<h3> Testes de validação da instalação do OPENLDAP </h3>
+<ol type="1" start="1">
+<li>Verifique se o serviço está disponível:</li>
+<fieldset id="comandos"><pre>
+# ss -nltp | grep ldap
+</pre></fieldset>
+
+<li>Visualize se a base de dados física do OpenLDAP foi criada:</li>
+<fieldset id="comandos"><pre>
+#ls -lh /var/lib/ldap
+</pre></fieldset>
+
+<li>Verifique se há erros no arquivos de configuração:</li>
+<fieldset id="comandos"><pre>
+#slaptest
+</pre></fieldset>
+<li>Verifique o conteúdo da base de dados do serviço
+<fieldset id="comandos"><pre>
+#slapcat
+</pre></fieldset>
+
+</ol>
+<section id="referencias">
+<h2>Referências</h2>
+
+<footer id="rodape">
+	<p>	Copyright&copy 2017 by Robson Lopes</p>
+	<p><a href="http://www.facebook.com" target="_blank"><img src="imagens/fbklogo.jpg"/></a>
+	<a href="http://www.twitter.com" target="_blank"><img src="imagens/twrlogo.jpg"/></a>
+	</p>		
+</footer>
+</div>
+</body>
+</html>

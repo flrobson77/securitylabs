@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+	<meta charset="utf-8">
+	<title>	SecurityLabs </title>
+	<link rel="stylesheet" type="text/css" href="css/cssseclabs.css"/>
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-113302879-1">
+	</script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag('js', new Date());
+		gtag('config', 'UA-113302879-1');
+	</script>	
+</head>
+
+<body>
+	<header id="cabecalho">
+			<figure id="logo">
+				<img id="logo" src="imagens/logoseclabs200.jpg"/>
+					<figcaption>
+					O melhor ataque é a defesa.
+					</figcaption>
+			</figure>
+	<nav id="menu">
+		<h1>Menu Principal</h1>
+		<ul type="disc">
+			<li><a href="index.html">Home</a></li>
+			<li><a href="labs.html">Laboratórios</a></li>
+			<li><a href="artigos.html">Artigos</a></li>
+			<li><a href="videos.html">Videos</a></li>
+			<li><a href="quemsomos.html">Sobre</a></li>
+			</ul>
+	</nav>
+	</header>
+	<section>	
+	<nav id="sidebar">
+		<h1>Artigos</h1>
+		<ul type="disc">
+			<li><a wm href="index.html">Artigo01</a></li>
+			<li><a wm href="labs.html">Artigo02</a></li>
+			<li><a wm href="artigos.html">Artigo03</a></li>
+			<li><a wm href="videos.html">Artigo04</a></li>
+			<li><a wm href="quemsomos.html">Artigo05</a></li>
+		</ul>
+	</nav>
+
+	<article id="conteudo">	</article>
+	</section>
+
+	<footer id="rodape">
+		<p>	Copyright&copy 2018 by Robson Lopes</p>
+		<p><a href="http://www.facebook.com" target="_blank"><img src="imagens/fbklogo.jpg"/></a>
+		<a href="http://www.twitter.com" target="_blank"><img src="imagens/twrlogo.jpg"/></a>
+		</p>
+	</footer>
+
+	<script>
+		document.querySelectionAll('wm').forEach (link => {
+			link.onclick = function(e) {
+				e.preventDefault()
+
+				const conteudo = document.getElementById('conteudo')
+				fetch (link.href)
+					.then(resp => resp.txt())
+					.then(html => conteudo.innerHTML = html)
+			}
+		})
+	</script>
+</body>
+</html>

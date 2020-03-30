@@ -1,12 +1,10 @@
 @charset "UTF-8";
 
 .slide {
-	display: block;
-	height: 400px;
-	width: 700px;
-	margin: auto;
-	margin-top: 20px;
-	margin-left: 10px;
+     display: block;
+     height: auto;
+     width: auto;
+     margin: auto;
 	position: relative;
 }
 
@@ -17,8 +15,8 @@
 
 .slide img {
 	margin: auto;
-	height: 100%;
-	width: 100%;
+	height: auto;
+	width: auto;
 	vertical-align: top;
 }
 
@@ -67,5 +65,4 @@
      visibility: visible;
      z-index: 10;
 } 
-
 
